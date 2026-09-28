@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PyCode Academy</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1220; --panel:#111a2e; --panel2:#0e1626; --line:#1e293b;
+    --emerald:#34d399; --emerald-dim:#10b98133; --text:#e2e8f0; --sub:#94a3b8;
+    --amber:#fbbf24; --rose:#fb7185;
+  }
+  html,body{height:100%;}
+  body{
+    background:radial-gradient(1200px 600px at 80% -10%, #10243d 0%, transparent 60%), var(--bg);
+    color:var(--text); font-family:'Inter',sans-serif;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:#1e293b;border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  .code-scroll{overflow-x:auto;}
+  @keyframes popin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .popin{animation:popin .25s ease-out;}
+  @keyframes xpfloat{0%{opacity:0;transform:translateY(0)}20%{opacity:1}100%{opacity:0;transform:translateY(-24px)}}
+  .xpfloat{animation:xpfloat 1.1s ease-out forwards;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const {useState,useMemo,useRef,useEffect} = React;
+
+/* ---------- tiny inline icon set ---------- */
+const I = {
+  Lock: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>,
+  Check: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="none" stroke="currentColor" strokeWidth="3"><path d="M4 12l5 5L20 6"/></svg>,
+  Play: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>,
+  Star: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4.5L6 21l1.5-7.5L2 9h7z"/></svg>,
+  Bolt: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>,
+  Back: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>,
+  Bulb: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18h6M10 22h4M12 2a6 6 0 0 0-3.6 10.8c.5.4.6 1 .6 1.2v1h6v-1c0-.2.1-.8.6-1.2A6 6 0 0 0 12 2z"/></svg>,
+  Terminal: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>,
+  X: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>,
+  Trophy: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 5H4a3 3 0 0 0 3 4M17 5h3a3 3 0 0 1-3 4"/></svg>,
+  Hash: p => <svg viewBox="0 0 24 24" width={p.s||16} height={p.s||16} fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 9h14M5 15h14M10 3L8 21M16 3l-2 18"/></svg>,
+};
+
+/* ---------- curriculum data ---------- */
+const MODULES = [
+{ key:"prints", title:"Prints & Basic Output", blurb:"Say hello to Python with print().", icon:"Terminal",
+  exercises:[
+    {id:"p1", title:"Fix the Missing Quotes", objective:"Every string needs matching quotes.",
+     code:`print(Hello, PyCode Academy!)`, type:"mcq",
+     options:[`print("Hello, PyCode Academy!")`,`print('Hello, PyCode Academy!)`,`print[Hello, PyCode Academy!]`],
+     correct:0, output:`Hello, PyCode Academy!`,
+     hint:"Text needs quotes around it so Python knows it's a string, not a variable name."},
+    {id:"p2", title:"Complete the Print Statement", objective:"Fill in the missing function call.",
+     code:`___("My favorite number is", 7)`, type:"fill", answer:`print`,
+     output:`My favorite number is 7`,
+     hint:"Which function displays text and values to the console?"},
+    {id:"p3", title:"Fix the Typo", objective:"Python function names are case-sensitive.",
+     code:`Print("Loading PyCode Academy...")`, type:"mcq",
+     options:[`print("Loading PyCode Academy...")`,`PRINT("Loading PyCode Academy...")`,`prnt("Loading PyCode Academy...")`],
+     correct:0, output:`Loading PyCode Academy...`,
+     hint:"Python's built-in function is always lowercase."},
+    {id:"p4", title:"Fix the Missing Comma", objective:"Separate multiple print values with a comma.", level:2,
+     code:`print("Score:" 95)`, type:"mcq",
+     options:[`print("Score:", 95)`,`print("Score:" + 95)`,`print("Score:"; 95)`],
+     correct:0, output:`Score: 95`,
+     hint:"Separate multiple things to print with a comma."},
+    {id:"p5", title:"Print Three Lines", objective:"Write three print statements that output exactly Alex, 13, and Blue on separate lines.", level:2,
+     type:"write", starter:`# print three lines below\n`, output:`Alex\n13\nBlue`,
+     hint:"Use three separate print() calls, each printing one exact value."},
+    {id:"p6", title:"Fix the String Conversion", objective:"Convert a number to text before joining it with +.", level:2,
+     code:`print("Total: " + 42)`, type:"mcq",
+     options:[`print("Total: " + str(42))`,`print("Total: " - 42)`,`print("Total: ", + 42)`],
+     correct:0, output:`Total: 42`,
+     hint:"Convert the number to a string with str() before joining it with +."},
+  ]},
+{ key:"comments", title:"Comments & Documentation", blurb:"Leave notes the computer ignores.", icon:"Hash",
+  exercises:[
+    {id:"c1", title:"Fix the Comment Symbol", objective:"Comments start with a specific character.",
+     code:`// This program greets the user\nprint("Hi!")`, type:"mcq",
+     options:[`# This program greets the user\nprint("Hi!")`,`** This program greets the user\nprint("Hi!")`,`<!-- This program greets the user -->\nprint("Hi!")`],
+     correct:0, output:`Hi!`,
+     hint:"Python comments use a single symbol, not two slashes like some other languages."},
+    {id:"c2", title:"Complete the Comment", objective:"Comment out a line without deleting it.",
+     code:`___ print("debug test")\nprint("Final Answer")`, type:"fill", answer:`#`,
+     output:`Final Answer`,
+     hint:"One character turns a line of code into a note Python skips entirely."},
+    {id:"c3", title:"Multi-line Notes", objective:"Use triple quotes for longer notes.",
+     code:`\"This is a summary\nof what this file does\"\nprint("Ready")`, type:"mcq",
+     options:[`"""This is a summary\nof what this file does"""\nprint("Ready")`,`"This is a summary\nof what this file does"\nprint("Ready")`,`#This is a summary\n#of what this file does\nprint("Ready")`],
+     correct:0, output:`Ready`,
+     hint:"Triple quotes let a string (often used as a note) span multiple lines."},
+    {id:"c4", title:"Fix the Missing Hash", objective:"Anything meant only for humans needs a # in front.", level:2,
+     code:`x = 5  This should be a comment\nprint(x)`, type:"mcq",
+     options:[`x = 5  # This should be a comment\nprint(x)`,`x = 5  // This should be a comment\nprint(x)`,`x = 5  <This should be a comment>\nprint(x)`],
+     correct:0, output:`5`,
+     hint:"Anything meant only for humans needs a # in front so Python ignores it."},
+    {id:"c5", title:"Comment Your Code", objective:"Write a comment line explaining your code, then a print statement that outputs Done.", level:2,
+     type:"write", starter:`# this program prints Done\n`, output:`Done`,
+     hint:"A comment line starts with #, and it won't show up in the output."},
+    {id:"c6", title:"Add a Comment Line", objective:"A line starting with # is ignored by Python.", level:2,
+     type:"write", starter:`# TODO: add more notes later\n`, output:`Notes saved`,
+     hint:"A line starting with # is ignored by Python — add your print statement below it."},
+  ]},
+{ key:"variables", title:"Variables & Data Types", blurb:"Store and label your data.", icon:"Hash",
+  exercises:[
+    {id:"v1", title:"Fix the Assignment", objective:"Variables are assigned with =.",
+     code:`age == 12\nprint(age)`, type:"mcq",
+     options:[`age = 12\nprint(age)`,`age =! 12\nprint(age)`,`12 = age\nprint(age)`],
+     correct:0, output:`12`,
+     hint:"A single equals sign assigns a value; a double equals sign compares."},
+    {id:"v2", title:"Fill in the Type", objective:"Match quotes to make a valid string.",
+     code:`name = ___Ava___\nprint(name)`, type:"fill", answer:`"`,
+     output:`Ava`,
+     hint:"Wrap the text in a matching pair of quotation marks."},
+    {id:"v3", title:"Fix the Type Mismatch", objective:"You can't add a string and a number directly.",
+     code:`score = "10" + 5\nprint(score)`, type:"mcq",
+     options:[`score = 10 + 5\nprint(score)`,`score = "10" + "5"\nprint(score)`,`score = int("10") + str(5)\nprint(score)`],
+     correct:0, output:`15`,
+     hint:"Decide: do you want math (numbers) or joined text (strings)? Keep both sides the same type."},
+    {id:"v4", title:"Swap Two Variables", objective:"Python can swap values in one line.", level:2,
+     code:`a = 1\nb = 2\na, b = b\nprint(a, b)`, type:"mcq",
+     options:[`a = 1\nb = 2\na, b = b, a\nprint(a, b)`,`a = 1\nb = 2\nswap(a,b)\nprint(a, b)`,`a = 1\nb = 2\na = b\nb = a\nprint(a, b)`],
+     correct:0, output:`2 1`,
+     hint:"Python can swap two variables in one line: a, b = b, a."},
+    {id:"v5", title:"Build a Profile", objective:"Create name='Nova' and level=3, then print: Nova is level 3", level:2,
+     type:"write", starter:`name = "Nova"\nlevel = 3\n`, output:`Nova is level 3`,
+     hint:"Use commas inside print() to combine text and variables."},
+    {id:"v6", title:"Fix the Type Before Math", objective:"Convert the string to an integer before doing math with it.", level:2,
+     code:`count = "5"\ncount = count + 1\nprint(count)`, type:"mcq",
+     options:[`count = "5"\ncount = int(count) + 1\nprint(count)`,`count = "5"\ncount = count + "1"\nprint(count)`,`count = 5\ncount = count + "1"\nprint(count)`],
+     correct:0, output:`6`,
+     hint:"Convert the string to an integer before doing math with it."},
+  ]},
+{ key:"input", title:"User Input", blurb:"Let the program ask questions.", icon:"Terminal",
+  exercises:[
+    {id:"i1", title:"Fix the Function Name", objective:"Use the right built-in to read input.",
+     code:`name = get("What is your name? ")\nprint("Hi", name)`, type:"mcq",
+     options:[`name = input("What is your name? ")\nprint("Hi", name)`,`name = read("What is your name? ")\nprint("Hi", name)`,`name = ask("What is your name? ")\nprint("Hi", name)`],
+     correct:0, output:`Hi Jordan`,
+     hint:"Python's built-in for reading text from the keyboard is a short 5-letter word."},
+    {id:"i2", title:"Fill in the Conversion", objective:"input() always returns a string.",
+     code:`age = ___(input("Your age: "))\nprint(age + 1)`, type:"fill", answer:`int`,
+     output:`13`,
+     hint:"To do math with input, first convert the text to a whole number."},
+    {id:"i3", title:"Fix the Missing Prompt", objective:"input() needs its message inside parentheses.",
+     code:`favorite = input\nprint("You picked", favorite)`, type:"mcq",
+     options:[`favorite = input("Pick a color: ")\nprint("You picked", favorite)`,`favorite = input["Pick a color: "]\nprint("You picked", favorite)`,`favorite = input "Pick a color: "\nprint("You picked", favorite)`],
+     correct:0, output:`You picked blue`,
+     hint:"Don't forget the parentheses — input() is a function call, not just a name."},
+    {id:"i4", title:"Fix the Missing Variable", objective:"You must store input() in a variable to use it later.", level:2,
+     code:`input("Enter code: ")\nprint(code)`, type:"mcq",
+     options:[`code = input("Enter code: ")\nprint(code)`,`input("Enter code: ") = code\nprint(code)`,`code == input("Enter code: ")\nprint(code)`],
+     correct:0, output:`1234`,
+     hint:"Save what input() returns into a variable, or you can't use it again."},
+    {id:"i5", title:"Fill in the Input Call", objective:"Read a city name from the user.", level:2,
+     code:`city = ___("City: ")\nprint("You live in", city)`, type:"fill", answer:`input`,
+     output:`You live in Denver`,
+     hint:"Same function you used to read the name earlier."},
+    {id:"i6", title:"Fill in the Comparison", objective:"Check if age is 18 or older.", level:2,
+     code:`age = int(input("Age: "))\nif age ___ 18:\n    print("Adult")`, type:"fill", answer:`>=`,
+     output:`Adult`,
+     hint:"Use a comparison operator to check if age is 18 or older."},
+  ]},
+{ key:"conditionals", title:"If/Else Conditionals", blurb:"Teach your code to make decisions.", icon:"Hash",
+  exercises:[
+    {id:"if1", title:"Fix the Missing Colon", objective:"if statements need a colon.",
+     code:`age = 15\nif age >= 13\n    print("Teenager")`, type:"mcq",
+     options:[`age = 15\nif age >= 13:\n    print("Teenager")`,`age = 15\nif age >= 13;\n    print("Teenager")`,`age = 15\nif (age >= 13)\n    print("Teenager")`],
+     correct:0, output:`Teenager`,
+     hint:"Every if, elif, and else line ends with a colon in Python."},
+    {id:"if2", title:"Fill in the Keyword", objective:"Chain another condition with elif.",
+     code:`grade = 85\nif grade >= 90:\n    print("A")\n___ grade >= 80:\n    print("B")`, type:"fill", answer:`elif`,
+     output:`B`,
+     hint:"It's 'else if' shortened into one Python keyword."},
+    {id:"if3", title:"Fix the Indentation", objective:"Python uses indentation to group code.",
+     code:`x = 7\nif x > 5:\nprint("Big number")`, type:"mcq",
+     options:[`x = 7\nif x > 5:\n    print("Big number")`,`x = 7\nif x > 5:\n  --print("Big number")`,`x = 7\nif x > 5\n    print("Big number")`],
+     correct:0, output:`Big number`,
+     hint:"The line inside the if-block must be indented, usually 4 spaces."},
+    {id:"if4", title:"Fix the Comparison", objective:"Comparison uses two equals signs.", level:2,
+     code:`x = 5\nif x = 5:\n    print("Five!")`, type:"mcq",
+     options:[`x = 5\nif x == 5:\n    print("Five!")`,`x = 5\nif x === 5:\n    print("Five!")`,`x = 5\nif x = 5:\n    print("Five!")`],
+     correct:0, output:`Five!`,
+     hint:"Comparison uses two equals signs; one equals sign assigns a value."},
+    {id:"if5", title:"Even or Odd", objective:"Write an if/else that prints Even if n=8 is divisible by 2, otherwise Odd.", level:2,
+     type:"write", starter:`n = 8\n`, output:`Even`,
+     hint:"Use the modulo operator % to check divisibility: n % 2 == 0."},
+    {id:"if6", title:"Grade Bands", objective:"Write if/elif/else that prints Pass if score=75 is 60 or above, else Fail.", level:2,
+     type:"write", starter:`score = 75\n`, output:`Pass`,
+     hint:"if score >= 60: print('Pass') else: print('Fail')"},
+  ]},
+{ key:"loops", title:"Loops (for & while)", blurb:"Repeat actions without repeating code.", icon:"Bolt",
+  exercises:[
+    {id:"l1", title:"Fix the Range Loop", objective:"range() needs parentheses, not brackets.",
+     code:`for i in range[5]:\n    print(i)`, type:"mcq",
+     options:[`for i in range(5):\n    print(i)`,`for i in range{5}:\n    print(i)`,`for i in range 5:\n    print(i)`],
+     correct:0, output:`0\n1\n2\n3\n4`,
+     hint:"Function calls in Python always use round parentheses."},
+    {id:"l2", title:"Fill in the Loop Keyword", objective:"Repeat while a condition stays true.",
+     code:`count = 0\n___ count < 3:\n    print(count)\n    count += 1`, type:"fill", answer:`while`,
+     output:`0\n1\n2`,
+     hint:"This loop keeps going 'while' something is still true."},
+    {id:"l3", title:"Fix the Infinite Loop", objective:"Loops need a way to eventually stop.",
+     code:`n = 0\nwhile n < 3:\n    print(n)`, type:"mcq",
+     options:[`n = 0\nwhile n < 3:\n    print(n)\n    n += 1`,`n = 0\nwhile n < 3:\n    print(n)\n    n = n`,`n = 0\nwhile n < 3:\n    print(n)\n    break`],
+     correct:0, output:`0\n1\n2`,
+     hint:"Something inside the loop needs to change so the condition eventually becomes false."},
+    {id:"l4", title:"Fix the Range Bound", objective:"range(a, b) stops before b.", level:2,
+     code:`for i in range(1, 5):\n    print(i)`, type:"mcq",
+     options:[`for i in range(1, 6):\n    print(i)`,`for i in range(1, 5, 1):\n    print(i)`,`for i in range(0, 5):\n    print(i)`],
+     correct:0, output:`1\n2\n3\n4\n5`,
+     hint:"range(a, b) stops before b, so to include 5 you need b=6."},
+    {id:"l5", title:"Sum 1 to 5", objective:"Use a for loop to add the numbers 1 through 5 and print the total.", level:2,
+     type:"write", starter:`total = 0\n`, output:`15`,
+     hint:"Start a total at 0, then add i to it inside the loop."},
+    {id:"l6", title:"Fix the Countdown", objective:"Counting downward needs a negative step.", level:2,
+     code:`for i in range(10, 0):\n    print(i)`, type:"mcq",
+     options:[`for i in range(10, 0, -1):\n    print(i)`,`for i in range(0, 10):\n    print(i)`,`for i in range(10, -1):\n    print(i)`],
+     correct:0, output:`10\n9\n8\n7\n6\n5\n4\n3\n2\n1`,
+     hint:"Counting downward needs a negative step as the third argument to range()."},
+  ]},
+{ key:"dictionaries", title:"Dictionaries & Data Structures", blurb:"Store data as key/value pairs.", icon:"Hash",
+  exercises:[
+    {id:"d1", title:"Create a Student Record", objective:"Dictionaries use curly braces and colons.",
+     code:`student = ["name": "Maya", "grade": 8]\nprint(student["name"])`, type:"mcq",
+     options:[`student = {"name": "Maya", "grade": 8}\nprint(student["name"])`,`student = ("name": "Maya", "grade": 8)\nprint(student["name"])`,`student = {"name" = "Maya", "grade" = 8}\nprint(student["name"])`],
+     correct:0, output:`Maya`,
+     hint:"Dictionaries are written with curly braces { }, and each pair uses a colon."},
+    {id:"d2", title:"Lookup Key Missing", objective:"Use .get() to avoid crashing on a missing key.",
+     code:`student = {"name": "Maya"}\nprint(student["grade"])`, type:"mcq",
+     options:[`student = {"name": "Maya"}\nprint(student.get("grade", "N/A"))`,`student = {"name": "Maya"}\nprint(student.grade)`,`student = {"name": "Maya"}\nprint(student["grade"] or "N/A")`],
+     correct:0, output:`N/A`,
+     hint:".get() lets you supply a default value if the key doesn't exist."},
+    {id:"d3", title:"Fill in the Update", objective:"Add a new key to an existing dictionary.",
+     code:`pet = {"name": "Rex"}\npet___"age"] = 3\nprint(pet)`, type:"fill", answer:`[`,
+     output:`{'name': 'Rex', 'age': 3}`,
+     hint:"Use square brackets to add or change a key, just like reading one."},
+    {id:"d4", title:"Fill in the Values Method", objective:"Loop over just the values of a dictionary.", level:2,
+     code:`prices = {"pen":2, "cup":5}\ntotal = 0\nfor v in prices.___():\n    total += v\nprint(total)`, type:"fill", answer:`values`,
+     output:`7`,
+     hint:".values() gives you just the values, without the keys."},
+    {id:"d5", title:"Build & Print a Dict", objective:"Create scores with Sam:90 and Lee:75, then print scores['Sam'].", level:2,
+     type:"write", starter:`scores = {"Sam": 90, "Lee": 75}\n`, output:`90`,
+     hint:"Access a dictionary value with square brackets and the key name."},
+    {id:"d6", title:"Update a Dictionary", objective:"Add a new key to an existing dictionary, then print its value.", level:2,
+     type:"write", starter:`pet = {"name": "Rex"}\n`, output:`3`,
+     hint:"Assign to a new key with square brackets: pet['age'] = 3."},
+  ]},
+{ key:"functions", title:"Basic Functions (def)", blurb:"Package code you can reuse.", icon:"Bolt",
+  exercises:[
+    {id:"f1", title:"Fix the Definition", objective:"Functions are defined with def and a colon.",
+     code:`function greet(name):\n    print("Hi", name)\n\ngreet("Sam")`, type:"mcq",
+     options:[`def greet(name):\n    print("Hi", name)\n\ngreet("Sam")`,`def greet(name)\n    print("Hi", name)\n\ngreet("Sam")`,`func greet(name):\n    print("Hi", name)\n\ngreet("Sam")`],
+     correct:0, output:`Hi Sam`,
+     hint:"Python's keyword for defining a function is just three letters."},
+    {id:"f2", title:"Fill in Return", objective:"Send a value back to the caller.",
+     code:`def square(n):\n    ___ n * n\n\nprint(square(4))`, type:"fill", answer:`return`,
+     output:`16`,
+     hint:"Without this keyword, a function gives back None instead of the result."},
+    {id:"f3", title:"Fix the Call", objective:"Calling a function needs parentheses with arguments.",
+     code:`def add(a, b):\n    return a + b\n\nprint(add)`, type:"mcq",
+     options:[`def add(a, b):\n    return a + b\n\nprint(add(3, 4))`,`def add(a, b):\n    return a + b\n\nprint(add[3, 4])`,`def add(a, b):\n    return a + b\n\nprint(add 3, 4)`],
+     correct:0, output:`7`,
+     hint:"To actually run the function, call it with parentheses and pass in real values."},
+    {id:"f4", title:"Fix the Default Argument", objective:"Give a parameter a default so the function works with no arguments.", level:2,
+     code:`def greet(name):\n    print("Hi", name)\ngreet()`, type:"mcq",
+     options:[`def greet(name="Guest"):\n    print("Hi", name)\ngreet()`,`def greet(name):\n    print("Hi", name)\ngreet("")`,`def greet():\n    print("Hi", name)\ngreet()`],
+     correct:0, output:`Hi Guest`,
+     hint:"Give the parameter a default value so the function works even with no arguments."},
+    {id:"f5", title:"Write a Multiply Function", objective:"Define multiply(a, b) that returns a*b, then print multiply(4, 5).", level:2,
+     type:"write", starter:`def multiply(a, b):\n    # your code here\n\nprint(multiply(4, 5))\n`, output:`20`,
+     hint:"Use return, not print, inside the function—then print the result where you call it."},
+    {id:"f6", title:"Fix the Missing Return", objective:"Without return, a function gives back None.", level:2,
+     code:`def square(n):\n    n * n\nprint(square(5))`, type:"mcq",
+     options:[`def square(n):\n    return n * n\nprint(square(5))`,`def square(n):\n    print(n * n)\nprint(square(5))`,`def square(n):\n    n * n\n    return\nprint(square(5))`],
+     correct:0, output:`25`,
+     hint:"Without return, a function gives back None instead of the computed value."},
+  ]},
+{ key:"oop", title:"Basic OOP (Classes & Objects)", blurb:"Model real things as objects.", icon:"Star",
+  exercises:[
+    {id:"o1", title:"Fix the Class Definition", objective:"Classes start with class and a colon.",
+     code:`class Dog:\n    def __init__(self, name):\n        self.name = name\n\nd = Dog("Rex")\nprint(d.name)`, type:"mcq",
+     options:[`class Dog:\n    def __init__(self, name):\n        self.name = name\n\nd = Dog("Rex")\nprint(d.name)`,`class Dog\n    def __init__(self, name):\n        self.name = name\n\nd = Dog("Rex")\nprint(d.name)`,`object Dog:\n    def __init__(self, name):\n        self.name = name\n\nd = Dog("Rex")\nprint(d.name)`],
+     correct:0, output:`Rex`,
+     hint:"The class header needs the class keyword and ends with a colon, like a function."},
+    {id:"o2", title:"Fill in self", objective:"Instance methods always take self first.",
+     code:`class Cat:\n    def meow(___):\n        print("Meow!")\n\nc = Cat()\nc.meow()`, type:"fill", answer:`self`,
+     output:`Meow!`,
+     hint:"This special first parameter refers to the specific object calling the method."},
+    {id:"o3", title:"Fix the Missing __init__", objective:"__init__ sets up a new object's attributes.",
+     code:`class Car:\n    def setup(self, color):\n        self.color = color\n\nc = Car("red")\nprint(c.color)`, type:"mcq",
+     options:[`class Car:\n    def __init__(self, color):\n        self.color = color\n\nc = Car("red")\nprint(c.color)`,`class Car:\n    def new(self, color):\n        self.color = color\n\nc = Car("red")\nprint(c.color)`,`class Car:\n    def setup(color):\n        self.color = color\n\nc = Car("red")\nprint(c.color)`],
+     correct:0, output:`red`,
+     hint:"Python automatically runs a specific double-underscore method when an object is created."},
+    {id:"o4", title:"Fix the Missing self", objective:"Save a value onto the object with self.name, not just name.", level:2,
+     code:`class Robot:\n    def __init__(self, name):\n        name = name\n\nr = Robot("A1")\nprint(r.name)`, type:"mcq",
+     options:[`class Robot:\n    def __init__(self, name):\n        self.name = name\n\nr = Robot("A1")\nprint(r.name)`,`class Robot:\n    def __init__(self, name):\n        name = self\n\nr = Robot("A1")\nprint(r.name)`,`class Robot:\n    def __init__(name):\n        self.name = name\n\nr = Robot("A1")\nprint(r.name)`],
+     correct:0, output:`A1`,
+     hint:"To save it on the object, assign it to self.name, not just name."},
+    {id:"o5", title:"Fill in the Constructor Call", objective:"Create a new Player object from the class below.", level:2,
+     code:`class Player:\n    def __init__(self):\n        self.score = 0\n\np = ___()\nprint(p.score)`, type:"fill", answer:`Player`,
+     output:`0`,
+     hint:"Call the class name like a function to create a new object."},
+    {id:"o6", title:"Fix the Missing Call", objective:"Calling a method needs parentheses.", level:2,
+     code:`class Cat:\n    def __init__(self, name):\n        self.name = name\n    def speak(self):\n        print(self.name, "says meow")\n\nc = Cat("Tom")\nc.speak`, type:"mcq",
+     options:[`class Cat:\n    def __init__(self, name):\n        self.name = name\n    def speak(self):\n        print(self.name, "says meow")\n\nc = Cat("Tom")\nc.speak()`,`class Cat:\n    def __init__(self, name):\n        self.name = name\n    def speak(self):\n        print(self.name, "says meow")\n\nc = Cat("Tom")\nCat.speak`,`class Cat:\n    def __init__(self, name):\n        self.name = name\n    def speak(self):\n        print(self.name, "says meow")\n\nc = Cat("Tom")\nc.speak(self)`],
+     correct:0, output:`Tom says meow`,
+     hint:"Calling a method needs parentheses, just like calling a function."},
+  ]},
+{ key:"final", title:"Final Practice & Challenges", blurb:"Mix everything you've learned.", icon:"Trophy",
+  exercises:[
+    {id:"z1", title:"Debug the Grade Checker", objective:"Combine input, conversion, and conditionals.",
+     code:`score = input("Score: ")\nif score >= 60:\n    print("Pass")\nelse:\n    print("Fail")`, type:"mcq",
+     options:[`score = int(input("Score: "))\nif score >= 60:\n    print("Pass")\nelse:\n    print("Fail")`,`score = input("Score: ")\nif int(score) >= 60\n    print("Pass")\nelse:\n    print("Fail")`,`score = input("Score: ")\nif score >= "60":\n    print("Pass")\nelse:\n    print("Fail")`],
+     correct:0, output:`Pass`,
+     hint:"input() returns text — convert it to a number before comparing with >=."},
+    {id:"z2", title:"Fill in the Loop + Dictionary", objective:"Loop through dictionary keys.",
+     code:`scores = {"Sam": 90, "Lee": 75}\nfor name ___ scores:\n    print(name, scores[name])`, type:"fill", answer:`in`,
+     output:`Sam 90\nLee 75`,
+     hint:"You loop 'in' a collection — same keyword as a for-loop over a range."},
+    {id:"z3", title:"Debug the Class + Function Mix", objective:"Use a class method inside a loop.",
+     code:`class Robot:\n    def __init__(self, name):\n        self.name = name\n    def speak(self):\n        print(self.name + " says beep")\n\nbots = [Robot("A1"), Robot("B2")]\nfor b in bots:\n    b.speak`, type:"mcq",
+     options:[`class Robot:\n    def __init__(self, name):\n        self.name = name\n    def speak(self):\n        print(self.name + " says beep")\n\nbots = [Robot("A1"), Robot("B2")]\nfor b in bots:\n    b.speak()`,`class Robot:\n    def __init__(self, name):\n        self.name = name\n    def speak(self):\n        print(self.name + " says beep")\n\nbots = [Robot("A1"), Robot("B2")]\nfor b in bots:\n    Robot.speak`,`class Robot:\n    def __init__(self, name):\n        self.name = name\n    def speak(self):\n        print(self.name + " says beep")\n\nbots = [Robot("A1"), Robot("B2")]\nfor b in bots:\n    b.speak(self)`],
+     correct:0, output:`A1 says beep\nB2 says beep`,
+     hint:"Calling a method still needs parentheses, just like calling a function."},
+    {id:"z4", title:"Fix the Dictionary Sum", objective:"Add up the values, not the keys.", level:2,
+     code:`def total(prices):\n    return sum(prices)\n\ncart = {"pen":2,"cup":5}\nprint(total(cart))`, type:"mcq",
+     options:[`def total(prices):\n    return sum(prices.values())\n\ncart = {"pen":2,"cup":5}\nprint(total(cart))`,`def total(prices):\n    return sum(prices.keys())\n\ncart = {"pen":2,"cup":5}\nprint(total(cart))`,`def total(prices):\n    return sum(prices)\n\ncart = {"pen":2,"cup":5}\nprint(total(cart))`],
+     correct:0, output:`7`,
+     hint:"You want to add up the values, not the keys — use .values()."},
+    {id:"z5", title:"Full Mini Program", objective:"Print Level 1 through Level 3, one per line, using a loop.", level:2,
+     type:"write", starter:`# your loop here\n`, output:`Level 1\nLevel 2\nLevel 3`,
+     hint:"range(1,4) combined with print('Level', i) gets you there."},
+    {id:"z6", title:"Loop + Function Challenge", objective:"Define double(n) returning n*2, then loop-print double(1), double(2), double(3).", level:2,
+     type:"write", starter:`def double(n):\n    # your code\n\n`, output:`2\n4\n6`,
+     hint:"Combine a for loop over range(1,4) with calls to double(i)."},
+  ]},
+];
+
+MODULES.forEach(m => m.exercises.forEach(e => { if(!e.level) e.level = 1; }));
+
+const THEMES = [
+  {name:"Emerald", hex:"#34d399", dim:"#10b98122"},
+  {name:"Cyber Blue", hex:"#38bdf8", dim:"#0ea5e922"},
+  {name:"Neon Purple", hex:"#c084fc", dim:"#a855f722"},
+  {name:"Sunset Orange", hex:"#fb923c", dim:"#f9731622"},
+];
+
+const STATUS_COLORS = { locked:"#475569", inprogress:"#fbbf24", mastered:"#34d399" };
+
+/* ---------- mini Python-subset interpreter (for Sandbox & write-exercises) ---------- */
+function runPy(src){
+  try{
+    const stripped = src.replace(/\t/g,"    ").split("\n").map(line=>{
+      let inS=false,inD=false,out="";
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==="'"&&!inD) inS=!inS; else if(c==='"'&&!inS) inD=!inD;
+        if(c==="#"&&!inS&&!inD) break;
+        out+=c;
+      }
+      return out;
+    });
+    const rows = stripped.map(r=>({indent:(r.match(/^ */)[0]).length, text:r.trim()})).filter(r=>r.text!=="");
+    function buildBlock(list){
+      const base = list.length?list[0].indent:0; const body=[];
+      while(list.length && list[0].indent>=base){
+        const node=list.shift(); const children=[];
+        while(list.length && list[0].indent>node.indent) children.push(list.shift());
+        body.push({text:node.text, children: children.length? buildBlock(children):[]});
+      }
+      return body;
+    }
+    const tree = buildBlock(rows.slice());
+    function tx(s){
+      return s.replace(/\bTrue\b/g,"true").replace(/\bFalse\b/g,"false").replace(/\bNone\b/g,"null")
+        .replace(/ and /g," && ").replace(/ or /g," || ").replace(/\bnot /g,"!")
+        .replace(/(\S+)\s*\/\/\s*(\S+)/g,"Math.floor(($1)/($2))")
+        .replace(/(\S+)\s*\*\*\s*(\S+)/g,"Math.pow($1,$2)");
+    }
+    function range(a){
+      const p=a.split(",").map(x=>x.trim());
+      if(p.length===1) return {start:"0",stop:p[0],step:"1"};
+      if(p.length===2) return {start:p[0],stop:p[1],step:"1"};
+      return {start:p[0],stop:p[1],step:p[2]};
+    }
+    function emit(nodes){
+      let js="";
+      for(const n of nodes){
+        const t=n.text;
+        let m;
+        if(/^if .*:$/.test(t)) js+=`if (${tx(t.slice(3,-1))}){\n${emit(n.children)}}\n`;
+        else if(/^elif .*:$/.test(t)) js+=`else if (${tx(t.slice(5,-1))}){\n${emit(n.children)}}\n`;
+        else if(/^else\s*:$/.test(t)) js+=`else {\n${emit(n.children)}}\n`;
+        else if((m=t.match(/^for (\w+) in range\((.*)\):$/))){
+          const rg=range(m[2]); const down=rg.step.trim().startsWith("-");
+          js+=`for(let ${m[1]}=${rg.start}; ${down?`${m[1]}>${rg.stop}`:`${m[1]}<${rg.stop}`}; ${m[1]}+=(${rg.step})){\n${emit(n.children)}}\n`;
+        }
+        else if((m=t.match(/^for (\w+) in (.+):$/))) js+=`for(const ${m[1]} of (${tx(m[2])})){\n${emit(n.children)}}\n`;
+        else if(/^while .*:$/.test(t)) js+=`while (${tx(t.slice(6,-1))}){\n${emit(n.children)}}\n`;
+        else if((m=t.match(/^def (\w+)\((.*)\):$/))) js+=`function ${m[1]}(${m[2]}){\n${emit(n.children)}}\n`;
+        else if(/^return\b/.test(t)) js+=`return ${tx(t.slice(7))};\n`;
+        else if(t==="pass") js+=";\n";
+        else js+=`${tx(t)};\n`;
+      }
+      return js;
+    }
+    const body = emit(tree);
+    const out=[];
+    const fn = new Function("print", body);
+    fn((...a)=>out.push(a.map(x=>typeof x==="boolean"?(x?"True":"False"):(x===null?"None":String(x))).join(" ")));
+    return {ok:true, output:out.join("\n")};
+  }catch(err){
+    return {ok:false, output:"", error:String(err.message||err)};
+  }
+}
+
+function useProgress(){
+  const initial = {};
+  MODULES.forEach(m => initial[m.key] = {});
+  const [progress,setProgress] = useState(initial);
+  const [xp,setXp] = useState(0);
+  const complete = (mkey, exid) => {
+    setProgress(p => ({...p, [mkey]: {...p[mkey], [exid]: true}}));
+  };
+  const isDone = (mkey, exid) => !!progress[mkey]?.[exid];
+  const moduleStats = (mkey) => {
+    const mod = MODULES.find(m=>m.key===mkey);
+    const done = mod.exercises.filter(e => isDone(mkey, e.id)).length;
+    return {done, total: mod.exercises.length};
+  };
+  const moduleStatus = (idx) => {
+    const mkey = MODULES[idx].key;
+    const {done,total} = moduleStats(mkey);
+    if (done === total) return "mastered";
+    if (idx === 0) return done>0 ? "inprogress" : "inprogress";
+    const prev = moduleStats(MODULES[idx-1].key);
+    if (prev.done < prev.total) return "locked";
+    return done>0 ? "inprogress" : "unlocked";
+  };
+  return {progress, complete, isDone, moduleStats, moduleStatus, xp, setXp};
+}
+
+function ProgressBar({done,total,color="#34d399"}){
+  const pct = total? Math.round(done/total*100):0;
+  return (
+    <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+      <div className="h-full rounded-full transition-all duration-500" style={{width:pct+"%", background:color}}/>
+    </div>
+  );
+}
+
+function ModuleCard({mod, idx, status, done, total, onOpen, accent}){
+  const Icon = I[mod.icon] || I.Hash;
+  const locked = status==="locked";
+  const badgeText = status==="mastered"?"Mastered":status==="locked"?"Locked":status==="inprogress"?"In Progress":"Start";
+  const semantic = STATUS_COLORS[status==="unlocked"?"inprogress":status] || "#64748b";
+  const badgeColor = status==="mastered" ? accent : semantic;
+  return (
+    <div className={"popin relative rounded-2xl border p-5 flex flex-col gap-3 transition-all "+(locked?"opacity-50 border-slate-800 bg-slate-900/40":"border-slate-700/60 bg-slate-900/70 hover:-translate-y-0.5")}
+      style={locked?{}:{borderColor:undefined}}>
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{background:accent+"22", color:accent}}>
+            <Icon s={20}/>
+          </div>
+          <div>
+            <p className="mono text-xs text-slate-500">Module {idx+1}</p>
+            <h3 className="text-slate-100 font-semibold leading-tight">{mod.title}</h3>
+          </div>
+        </div>
+        {locked && <I.Lock s={16} />}
+      </div>
+      <p className="text-sm text-slate-400">{mod.blurb}</p>
+      <div className="flex items-center justify-between text-xs mono text-slate-400">
+        <span>{done}/{total} exercises</span>
+        <span className="px-2 py-0.5 rounded-full font-semibold" style={{color:badgeColor, background:badgeColor+"22"}}>{badgeText}</span>
+      </div>
+      <ProgressBar done={done} total={total} color={badgeColor==="#64748b"?accent:badgeColor}/>
+      <button disabled={locked} onClick={()=>onOpen(idx)}
+        className={"mt-1 w-full py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition "+(locked?"bg-slate-800 text-slate-600 cursor-not-allowed":"text-slate-950")}
+        style={locked?{}:{background:accent}}>
+        <I.Play s={14}/> {locked?"Locked":done===total?"Review Module":"Start Module"}
+      </button>
+    </div>
+  );
+}
+
+function Hub({stateApi, onOpen, xp, accent}){
+  return (
+    <div className="max-w-6xl mx-auto px-6 py-10">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+        <div>
+          <p className="mono text-sm mb-1" style={{color:accent}}>$ python3 curriculum.py</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">PyCode Academy</h1>
+          <p className="text-slate-400 mt-2 max-w-xl">Debug real broken snippets, module by module, and level up from print() to full classes.</p>
+        </div>
+        <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3">
+          <I.Bolt s={18} />
+          <span className="mono text-lg font-bold text-amber-300">{xp} XP</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {MODULES.map((mod, idx) => {
+          const status = stateApi.moduleStatus(idx);
+          const {done,total} = stateApi.moduleStats(mod.key);
+          return <ModuleCard key={mod.key} mod={mod} idx={idx} status={status} done={done} total={total} onOpen={onOpen} accent={accent}/>;
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CodeBlock({code}){
+  const lines = code.split("\n");
+  return (
+    <div className="rounded-xl border border-slate-700 bg-[#0a0f1a] code-scroll">
+      <div className="flex items-center gap-1.5 px-4 py-2 border-b border-slate-800">
+        <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70"/>
+        <span className="w-2.5 h-2.5 rounded-full bg-amber-300/70"/>
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70"/>
+        <span className="mono text-xs text-slate-500 ml-2">solution.py</span>
+      </div>
+      <pre className="mono text-sm leading-relaxed p-4 overflow-x-auto"><code>
+      {lines.map((ln,i)=>(
+        <div key={i} className="flex">
+          <span className="w-6 text-right pr-3 select-none text-slate-600">{i+1}</span>
+          <span className="text-slate-200 whitespace-pre">{ln||" "}</span>
+        </div>
+      ))}
+      </code></pre>
+    </div>
+  );
+}
+
+function Workspace({modIdx, stateApi, onBack, addXp, accent}){
+  const mod = MODULES[modIdx];
+  const [level, setLevel] = useState(1);
+  const filtered = useMemo(()=>mod.exercises.filter(e=>(e.level||1)===level), [mod, level]);
+  const [exIdx, setExIdx] = useState(0);
+  const ex = filtered[exIdx] || filtered[0];
+  const [selected, setSelected] = useState(null);
+  const [fillVal, setFillVal] = useState("");
+  const [writeVal, setWriteVal] = useState("");
+  const [result, setResult] = useState(null); // {ok, msg}
+  const [showHint, setShowHint] = useState(false);
+  const [xpBurst, setXpBurst] = useState(false);
+
+  useEffect(()=>{ setExIdx(0); }, [level, modIdx]);
+  useEffect(()=>{ setSelected(null); setFillVal(""); setResult(null); setShowHint(false); setWriteVal(ex&&ex.type==="write"?ex.starter:""); }, [exIdx, modIdx, level]);
+
+  if (!ex) return null;
+  const done = stateApi.isDone(mod.key, ex.id);
+  const {done:doneCount,total} = stateApi.moduleStats(mod.key);
+
+  const check = () => {
+    let ok = false, errMsg = null;
+    if (ex.type === "mcq") ok = selected === ex.correct;
+    else if (ex.type === "fill") ok = fillVal.trim() === ex.answer;
+    else if (ex.type === "write") {
+      const r = runPy(writeVal);
+      ok = r.ok && r.output.trim() === ex.output.trim();
+      if (!r.ok) errMsg = "Runtime error: " + r.error;
+    }
+    if (ok){
+      setResult({ok:true, msg:"All tests passed."});
+      if (!done){ stateApi.complete(mod.key, ex.id); addXp(20); setXpBurst(true); setTimeout(()=>setXpBurst(false),1100); }
+    } else {
+      setResult({ok:false, msg: errMsg || "Not quite — check your syntax and try again."});
+    }
+  };
+
+  const filledPreview = ex.type==="fill" ? ex.code.replace("___", fillVal || "___") : ex.code;
+  const displayCode = ex.type==="mcq" && selected!==null ? ex.options[selected] : filledPreview;
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <div className="flex items-center justify-between mb-5">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-slate-400 hover:text-white text-sm font-medium">
+          <I.Back s={16}/> Curriculum Hub
+        </button>
+        <div className="flex items-center gap-4">
+          <span className="mono text-xs text-slate-500">{doneCount}/{total} complete</span>
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 relative">
+            <I.Bolt s={14}/><span className="mono text-sm font-bold text-amber-300">{addXp.current} XP</span>
+            {xpBurst && <span className="xpfloat absolute -top-4 right-2 mono text-xs font-bold" style={{color:accent}}>+20</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+        {/* sidebar */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-3 h-fit">
+          <p className="mono text-xs text-slate-500 px-2 pb-2 uppercase tracking-wide">{mod.title}</p>
+          <div className="flex gap-1 px-1 pb-2">
+            {[1,2].map(lv=>(
+              <button key={lv} onClick={()=>setLevel(lv)}
+                className={"flex-1 text-xs font-semibold py-1.5 rounded-md transition "+(level===lv?"text-slate-950":"text-slate-400 bg-slate-800/60 hover:text-slate-200")}
+                style={level===lv?{background:accent}:{}}>
+                Level {lv}
+              </button>
+            ))}
+          </div>
+          {filtered.map((e,i)=>{
+            const d = stateApi.isDone(mod.key, e.id);
+            const active = i===exIdx;
+            return (
+              <button key={e.id} onClick={()=>setExIdx(i)}
+                className={"w-full text-left px-3 py-2.5 rounded-lg mb-1 flex items-center gap-2 text-sm transition "+(active?"border":"text-slate-400 hover:bg-slate-800/70")}
+                style={active?{background:accent+"1a", color:accent, borderColor:accent+"55"}:{}}>
+                <span className={"w-5 h-5 rounded-full flex items-center justify-center shrink-0 "+(d?"text-slate-950":"border border-slate-600 text-slate-500")}
+                  style={d?{background:accent}:{}}>
+                  {d ? <I.Check s={11}/> : <span className="text-[10px] mono">{i+1}</span>}
+                </span>
+                <span className="truncate">{e.title}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* main */}
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+            <p className="mono text-xs mb-1" style={{color:accent}}>Level {ex.level||1} · Exercise {exIdx+1} of {filtered.length}</p>
+            <h2 className="text-xl font-bold text-white mb-1">{ex.title}</h2>
+            <p className="text-slate-400 text-sm">{ex.objective}</p>
+          </div>
+
+          {ex.type === "write" ? (
+            <div className="rounded-xl border border-slate-700 bg-[#0a0f1a] code-scroll">
+              <div className="flex items-center gap-1.5 px-4 py-2 border-b border-slate-800">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70"/>
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-300/70"/>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70"/>
+                <span className="mono text-xs text-slate-500 ml-2">your_solution.py</span>
+              </div>
+              <textarea value={writeVal} onChange={e=>setWriteVal(e.target.value)} spellCheck="false" rows={8}
+                className="w-full mono text-sm bg-transparent p-4 outline-none text-slate-200 resize-y"/>
+            </div>
+          ) : <CodeBlock code={displayCode}/>}
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+            {ex.type === "mcq" && (
+              <div className="space-y-2">
+                <p className="text-sm text-slate-300 mb-2">Choose the corrected code:</p>
+                {ex.options.map((opt,i)=>(
+                  <button key={i} onClick={()=>setSelected(i)}
+                    className="w-full text-left mono text-xs rounded-lg border px-3 py-2 transition"
+                    style={selected===i?{borderColor:accent, background:accent+"1a", color:accent}:{borderColor:"#334155", color:"#94a3b8"}}>
+                    {opt.split("\n")[0]}{opt.includes("\n")?" ...":""}
+                  </button>
+                ))}
+              </div>
+            )}
+            {ex.type === "fill" && (
+              <div>
+                <p className="text-sm text-slate-300 mb-2">Fill in the missing code:</p>
+                <input value={fillVal} onChange={e=>setFillVal(e.target.value)} placeholder="type the missing piece..."
+                  className="w-full mono text-sm bg-[#0a0f1a] border border-slate-700 rounded-lg px-3 py-2 focus:outline-none"
+                  style={{color:accent}} />
+              </div>
+            )}
+            {ex.type === "write" && (
+              <p className="text-sm text-slate-400">Write your solution above, then run it to check the output.</p>
+            )}
+
+            <div className="flex flex-wrap gap-3 mt-4">
+              <button onClick={check} className="px-4 py-2 rounded-lg text-slate-950 font-semibold text-sm flex items-center gap-2" style={{background:accent}}>
+                <I.Play s={14}/> Run Code / Check Solution
+              </button>
+              <button onClick={()=>setShowHint(s=>!s)} className="px-4 py-2 rounded-lg border border-amber-400/40 text-amber-300 hover:bg-amber-400/10 font-semibold text-sm flex items-center gap-2">
+                <I.Bulb s={14}/> Get Hint
+              </button>
+              {exIdx < filtered.length-1 && (
+                <button onClick={()=>setExIdx(exIdx+1)} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:border-slate-500 font-semibold text-sm ml-auto">
+                  Next Exercise →
+                </button>
+              )}
+            </div>
+
+            {showHint && (
+              <div className="popin mt-3 text-sm bg-amber-400/10 border border-amber-400/30 text-amber-200 rounded-lg px-4 py-3">
+                💡 {ex.hint}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-[#0a0f1a] p-5">
+            <p className="mono text-xs text-slate-500 mb-2 flex items-center gap-1.5"><I.Terminal s={13}/> console output</p>
+            {result ? (
+              <div className="popin mono text-sm" style={{color:result.ok?accent:"#fb7185"}}>
+                {result.ok ? (<>
+                  <div>&gt;&gt;&gt; {ex.output.split("\n").map((l,i)=><div key={i}>{l}</div>)}</div>
+                  <div className="mt-2 flex items-center gap-1.5"><I.Check s={13}/> {result.msg}</div>
+                </>) : (
+                  <div className="flex items-center gap-1.5"><I.X s={13}/> {result.msg}</div>
+                )}
+              </div>
+            ) : (
+              <p className="mono text-sm text-slate-600">// run your code to see output here</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sandbox({accent}){
+  const [code, setCode] = useState(`# Try some Python here!\nname = "World"\nfor i in range(3):\n    print("Hello,", name, "-", i)`);
+  const [out, setOut] = useState(null);
+  const run = () => setOut(runPy(code));
+  return (
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2"><I.Terminal s={20}/> Python Sandbox</h1>
+        <p className="text-slate-400 text-sm mt-1">Free-form practice space for live demos. Supports core syntax: print, variables, if/elif/else, for/while loops, functions, lists & dicts — no imports, classes, or external libraries.</p>
+      </div>
+      <div className="rounded-xl border border-slate-700 bg-[#0a0f1a]">
+        <div className="flex items-center gap-1.5 px-4 py-2 border-b border-slate-800">
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-400/70"/>
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-300/70"/>
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/70"/>
+          <span className="mono text-xs text-slate-500 ml-2">sandbox.py</span>
+        </div>
+        <textarea value={code} onChange={e=>setCode(e.target.value)} spellCheck="false" rows={12}
+          className="w-full mono text-sm bg-transparent p-4 outline-none text-slate-200 resize-y"/>
+      </div>
+      <button onClick={run} className="px-4 py-2 rounded-lg text-slate-950 font-semibold text-sm flex items-center gap-2" style={{background:accent}}>
+        <I.Play s={14}/> Run
+      </button>
+      <div className="rounded-2xl border border-slate-800 bg-[#0a0f1a] p-5">
+        <p className="mono text-xs text-slate-500 mb-2 flex items-center gap-1.5"><I.Terminal s={13}/> console output</p>
+        {out ? (
+          out.ok ? (
+            <div className="mono text-sm" style={{color:accent}}>{(out.output||"(no output)").split("\n").map((l,i)=><div key={i}>{l}</div>)}</div>
+          ) : (
+            <div className="mono text-sm text-rose-400 flex items-center gap-1.5"><I.X s={13}/> Runtime error: {out.error}</div>
+          )
+        ) : (
+          <p className="mono text-sm text-slate-600">// click Run to see output here</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const stateApi = useProgress();
+  const [view, setView] = useState("hub");
+  const [modIdx, setModIdx] = useState(0);
+  const [themeIdx, setThemeIdx] = useState(0);
+  const theme = THEMES[themeIdx];
+  const addXp = (n) => { stateApi.setXp(x=>x+n); };
+  addXp.current = stateApi.xp;
+
+  const openModule = (idx) => { setModIdx(idx); setView("workspace"); };
+
+  return (
+    <div className="min-h-screen">
+      <div className="sticky top-0 z-10 backdrop-blur border-b border-slate-800/80" style={{background:"rgba(11,18,32,0.85)"}}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-1 bg-slate-900/70 rounded-lg p-1">
+            <button onClick={()=>setView("hub")}
+              className={"px-3 py-1.5 rounded-md text-sm font-medium transition "+(view!=="sandbox"?"text-slate-950":"text-slate-400 hover:text-slate-200")}
+              style={view!=="sandbox"?{background:theme.hex}:{}}>Curriculum</button>
+            <button onClick={()=>setView("sandbox")}
+              className={"px-3 py-1.5 rounded-md text-sm font-medium transition flex items-center gap-1.5 "+(view==="sandbox"?"text-slate-950":"text-slate-400 hover:text-slate-200")}
+              style={view==="sandbox"?{background:theme.hex}:{}}><I.Terminal s={13}/> Python Sandbox</button>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {THEMES.map((t,i)=>(
+              <button key={t.name} title={t.name} onClick={()=>setThemeIdx(i)}
+                className={"w-6 h-6 rounded-full border-2 transition"}
+                style={{background:t.hex, borderColor: i===themeIdx? "#e2e8f0":"transparent"}}/>
+            ))}
+          </div>
+        </div>
+      </div>
+      {view==="hub" && <Hub stateApi={stateApi} onOpen={openModule} xp={stateApi.xp} accent={theme.hex}/>}
+      {view==="workspace" && <Workspace modIdx={modIdx} stateApi={stateApi} onBack={()=>setView("hub")} addXp={addXp} accent={theme.hex}/>}
+      {view==="sandbox" && <Sandbox accent={theme.hex}/>}
+      <footer className="text-center text-xs text-slate-600 mono py-8">PyCode Academy · practice environment · sandbox runs a simplified Python-subset interpreter</footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
